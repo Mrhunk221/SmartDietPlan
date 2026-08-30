@@ -1,56 +1,32 @@
 import os
-from dotenv import load_dotenv
-from flask import Flask, jsonify, request
-from flask_cors import CORS
+from flask import Flask, send_from_directory, jsonify, request
 from google import genai
+from dotenv import load_dotenv
 
+# Load environment variables (.env for local development)
 load_dotenv()
 
-app = Flask(__name__)
-CORS(app)
+# Initialize Flask app
+# static_folder points to the root directory where index.html, script.js, and style.css live
+app = Flask(__name__, static_folder='../', static_url_path='')
 
-api_key = os.getenv("GEMINI_API_KEY")
-client = genai.Client(api_key=api_key)
+# Initialize Gemini Client using the environment variable
+api_key = os.environ.get("GEMINI_API_KEY")
+client = genai.Client(api_key=api_key) if api_key else None
 
-@app.route("/", methods=["GET"])
-def home():
+@app.route('/')
+def serve_frontend():
+    # Serves your main frontend web page
+    return send_from_directory(app.static_folder, 'index.html')
+
+@app.route('/api/status', methods=['GET'])
+def status():
     return jsonify({"status": "SmartDiet AI Backend is running!"})
 
-@app.route("/generate-plan", methods=["POST"])
-def generate_plan():
-    try:
-        data = request.json
-        if not data:
-            return jsonify({"success": False, "error": "No input data provided."}), 400
+# Add your diet plan generation or other API endpoints below as needed:
+# @app.route('/api/generate-plan', methods=['POST'])
+# def generate_plan():
+#     ...
 
-        height = data.get("height", "")
-        weight = data.get("weight", "")
-        age = data.get("age", "")
-        gender = data.get("gender", "")
-        goal = data.get("goal", "")
-        diettype = data.get("diettype", "")
-        validity = data.get("validity", "")
-        restrictions = ", ".join(data.get("restrictions", []))
-
-        prompt = (
-            f"Create a personalized {diettype} diet plan for a {gender}, "
-            f"age {age}, height {height}cm, weight {weight}kg. "
-            f"Goal: {goal}. Duration: {validity}. Dietary restrictions: {restrictions}\n\n"
-            f"Please format the response clearly using daily headers (e.g. ### Day 1) "
-            f"and bullet points for Breakfast, Lunch, Dinner, and Snacks."
-        )
-
-        # Updated to the current gemini-3.6-flash model
-        response = client.models.generate_content(
-            model="gemini-3.6-flash",
-            contents=prompt,
-        )
-
-        return jsonify({"success": True, "plan": response.text})
-
-    except Exception as e:
-        print("Backend error:", str(e))
-        return jsonify({"success": False, "error": str(e)}), 500
-
-if __name__ == "__main__":
-    app.run(port=5000, debug=True)
+if __name__ == '__main__':
+    app.run(debug=True)

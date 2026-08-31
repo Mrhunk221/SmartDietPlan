@@ -61,7 +61,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Send request to Flask backend endpoint
         try {
-            const response = await fetch("http://127.0.0.1:5000/generate-plan", {
+            const response = await fetch("/api/generate-plan", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ height, weight, age, gender, goal, diettype, restrictions, validity })

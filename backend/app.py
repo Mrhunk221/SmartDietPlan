@@ -1,14 +1,13 @@
 import os
+import time
 from flask import Flask, send_from_directory, jsonify, request
 from google import genai
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# Initialize Flask app to serve frontend files from the root directory
 app = Flask(__name__, static_folder='../', static_url_path='')
 
-# Initialize Gemini Client
 api_key = os.environ.get("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key) if api_key else None
 
@@ -37,11 +36,30 @@ def generate_plan():
         )
         
         if client:
-            response = client.models.generate_content(
-                model='gemini-2.5-flash',
-                contents=prompt
-            )
-            plan_text = response.text
+            plan_text = None
+            max_retries = 2
+            retry_delay = 6
+            
+            for attempt in range(max_retries + 1):
+                try:
+                    response = client.models.generate_content(
+                        model='gemini-3.6-flash',
+                        contents=prompt
+                    )
+                    plan_text = response.text
+                    break
+                except Exception as api_err:
+                    err_str = str(api_err)
+                    if ("429" in err_str or "RESOURCE_EXHAUSTED" in err_str) and attempt < max_retries:
+                        time.sleep(retry_delay)
+                        continue
+                    elif "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
+                        return jsonify({
+                            "success": False, 
+                            "error": "API rate limit reached. Please wait 15 seconds and try clicking generate again."
+                        }), 429
+                    else:
+                        raise api_err
         else:
             plan_text = "Gemini API key not configured on backend."
 

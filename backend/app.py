@@ -24,11 +24,17 @@ def status():
 def generate_plan():
     try:
         data = request.get_json() or {}
-        # Extract user details sent from script.js if applicable
         goal = data.get('goal', 'Lose Weight')
         diet_type = data.get('diettype', 'Balanced')
+        validity = data.get('validity', '1 Week')
         
-        prompt = f"Create a concise, healthy 1-day sample meal plan for someone whose goal is {goal} and prefers a {diet_type} diet."
+        prompt = (
+            f"Create a structured, healthy meal plan for a duration of {validity} "
+            f"for someone whose goal is {goal} and prefers a {diet_type} diet. "
+            f"You MUST provide a distinct, full daily breakdown for every single day "
+            f"covered by {validity} (for example, Day 1, Day 2, Day 3, etc. up to the full duration). "
+            f"Do not summarize or provide only one day."
+        )
         
         if client:
             response = client.models.generate_content(
